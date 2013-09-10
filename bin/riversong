@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'tweetstream'
+require 'redis'
+require 'json'
+
+TweetStream.configure do |config|
+  config.consumer_key       = 'JPVLoVbMpvI0lHamriMtsA'
+  config.consumer_secret    = 'dDU43pcUACNsL2Mffnok34eTYvFaEsX6NzkV2rc2xrw'
+  config.oauth_token        = '20229781-a6cXPXwdIxRTcvznFPNnoHYmYD7HuYpJE3Z4R7ag'
+  config.oauth_token_secret = 'snsVrxzqMfvLehKZ4oPlBLmcNPFiUrvq8TgazjpdpWk'
+  config.auth_method        = :oauth
+end
+
+$redis = Redis.new
+
+term = '#ausvotes'
+
+daemon = TweetStream::Daemon.new('tracker', :multiple => false, :log_output => true)
+daemon.on_inited do
+  $redis = Redis.new
+  puts "===================> on_inited fired  <==================="
+end
+daemon.on_limit do |skip_count|
+  puts "===================> Reached limit count #{skip_count}  <==================="
+end
+daemon.on_error do |msg|
+  puts "===================> Error #{msg} ! <==================="
+end
+daemon.track(term) do |tweet|
+  $redis.publish 'twitter', "#{tweet.text.strip}"
+  puts "#{tweet}"
+end
